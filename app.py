@@ -8,44 +8,45 @@ FILE_ID = "1rxCY3Kj2pllx3Zz9q2bn0jeLFBiJoOz8"
 FILENAME = "similarity.pkl"
 
 
-def download_from_drive():
-    # This direct link works better for bypassing the basic Google Drive blocks
-    url = f'https://drive.google.com/uc?export=download&id={FILE_ID}'
+# -------- GOOGLE DRIVE LARGE FILE DOWNLOADER -------- #
+def download_file(file_id, destination):
+    session = requests.Session()
+    URL = "https://drive.usercontent.google.com/download"
 
-    with st.spinner("🚀 Downloading model from Google Drive... Please wait."):
-        response = requests.get(url, stream=True)
-        # Check if we actually got the file or an error
-        if response.status_code == 200:
-            with open(FILENAME, "wb") as f:
-                for chunk in response.iter_content(chunk_size=8192):
-                    f.write(chunk)
-        else:
-            st.error(f"Download failed! Status code: {response.status_code}")
-            st.stop()
+    params = {
+        "id": file_id,
+        "export": "download",
+        "confirm": "t"
+    }
+
+    response = session.get(URL, params=params, stream=True)
+
+    with open(destination, "wb") as f:
+        for chunk in response.iter_content(chunk_size=1048576):  # 1MB chunks
+            if chunk:
+                f.write(chunk)
 
 
-# 2. Execution (Run every time)
-if not os.path.exists(FILENAME):
-    download_from_drive()
+# -------- LOAD SIMILARITY SAFELY -------- #
+@st.cache_resource
+def load_similarity():
+    if not os.path.exists(FILENAME):
+        st.info("Downloading similarity matrix (first run only)...")
+        download_file(FILE_ID, FILENAME)
 
-# Check if file is valid before loading
-if os.path.getsize(FILENAME) < 1000:  # If file is tiny, it's an error page
-    st.error("The downloaded file is too small. Check if your Google Drive link is 'Anyone with the link can view'.")
-    os.remove(FILENAME)  # Remove bad file so we can retry
-    st.stop()
+    with open(FILENAME, "rb") as f:
+        return pickle.load(f)
 
-# 3. Load the data
-try:
-    with open(FILENAME, 'rb') as f:
-        similarity = pickle.load(f)
-except Exception as e:
-    st.error(f"Error loading the pickle file: {e}")
-    os.remove(FILENAME)  # Delete corrupted file
-    st.stop()
 
-# The rest of your code (movies.pkl, fetch_poster, recommend) stays the same
-# Load data
-movies = pickle.load(open('movies.pkl', 'rb'))   # KEEP AS DATAFRAME
+# -------- LOAD MOVIES -------- #
+@st.cache_resource
+def load_movies():
+    with open("movies.pkl", "rb") as f:
+        return pickle.load(f)
+
+
+similarity = load_similarity()
+movies = load_movies()
 
 # Movie titles for dropdown
 movies_list = movies['title'].values
