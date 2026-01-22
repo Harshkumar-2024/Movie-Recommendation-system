@@ -31,7 +31,7 @@ def download_file(file_id, destination):
 @st.cache_resource
 def load_similarity():
     if not os.path.exists(FILENAME):
-        st.info("Downloading similarity matrix (first run only)...")
+        #st.info("Downloading similarity matrix (first run only)...")
         download_file(FILE_ID, FILENAME)
 
     with open(FILENAME, "rb") as f:
@@ -105,5 +105,6 @@ if st.button('Recommend'):
         with col:
             st.image(poster)
             st.markdown(f"**{name}**")
+
 
 
